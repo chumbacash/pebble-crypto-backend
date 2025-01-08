@@ -54,11 +54,10 @@ To start the development server:
    
    ```bash
    uvicorn app.main:app --reload
+   ```
 
-----------------------------------
-
-### Disclaimer
+### Disclaimer:
 
 This repository is created by Chumbacash and is intended for personal projects only. Use it at your own risk. Nothing in this repository constitutes financial advice.
 
-Happy Day 🎇🎉
+Happy Day friends🎇🎉
