@@ -35,7 +35,7 @@ To set up the backend, follow the instructions below.
 1. Clone this repository:
 
    ```bash
-   git clone https://github.com/your-username/pebble_crypto_backend.git
+   git clone https://github.com/chumbacash/pebble-crypto-backend.git
    cd pebble_crypto_backend
 
 2. Setup a virtual environment:
