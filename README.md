@@ -7,18 +7,18 @@ This is the backend service for the **Pebble Crypto** app, a cryptocurrency sign
 ```
 pebble_crypto_backend/
 ├── app/
-│   ├── main.py         # FastAPI app entry point
-│   ├── routers/        # API routes
-│   │   ├── pairs.py    # Pairs endpoint logic
-│   │   ├── market.py   # Market data endpoint logic
-│   │   ├── signals.py  # Signal generation logic
-│   ├── services/       # External API services
-│   │   ├── binance.py  # Binance API integration
-│   │   ├── coingecko.py # CoinGecko API integration (optional)
-│   ├── utils/          # Utility functions
-│   └── models/         # Data models
-├── tests/              # Test cases
-└── requirements.txt    # Dependencies
+│   ├── main.py         
+│   ├── routers/       
+│   │   ├── pairs.py     
+│   │   ├── market.py  
+│   │   ├── signals.py 
+│   ├── services/      
+│   │   ├── binance.py  
+│   │   ├── coingecko.py 
+│   ├── utils/         
+│   └── models/         
+├── tests/             
+└── requirements.txt  
 ```
 
 ## Setup
