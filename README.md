@@ -7,18 +7,36 @@ This is the backend service for the **Pebble Crypto** app, a cryptocurrency sign
 ```
 pebble_crypto_backend/
 ├── app/
-│   ├── main.py         
-│   ├── routers/       
-│   │   ├── pairs.py     
-│   │   ├── market.py  
-│   │   ├── signals.py 
-│   ├── services/      
-│   │   ├── binance.py  
-│   │   ├── coingecko.py 
-│   ├── utils/         
-│   └── models/         
-├── tests/             
-└── requirements.txt  
+│   ├── api/
+│   │   └── v1/
+│   │       └── endpoints.py
+│   ├── core/
+│   │   ├── config.py
+│   │   └── database.py
+│   ├── models/
+│   │   ├── market.py
+│   │   ├── pair.py
+│   │   └── signal.py
+│   ├── routers/
+│   │   ├── market.py
+│   │   ├── pairs.py
+│   │   └── signals.py
+│   ├── services/
+│   │   ├── binance.py
+│   │   └── coingecko.py
+│   └── utils/
+│       ├── cache.py
+│       ├── fetch.py
+│       └── signals.py
+├── tests/
+│   ├── test_market.py
+│   ├── test_pairs.py
+│   ├── test_services.py
+│   └── test_signals.py
+├── .gitignore                 # Git-related files (hidden)
+├── requirements.txt           # Dependencies
+└── venv/                      # Virtual environment (ignore this folder when viewing files)
+ 
 ```
 
 ## Setup
