@@ -1,7 +1,7 @@
+![Banner Image](icons/banner.png)
+
 # Pebble Crypto Backend
 This is the backend service for the **Pebble Crypto** app, a cryptocurrency signals platform built using **FastAPI**.
-
-![Banner Image](icons/banner.png)
 
 ## Project Structure
 
