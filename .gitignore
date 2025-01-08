@@ -1,1 +1,9 @@
+# Environments
 venv
+
+# Others
+app\__pycache__
+app\api\v1\__pycache__
+app\routers\__pycache__
+app\services\__pycache__
+app\utils\__pycache__
