@@ -75,6 +75,13 @@ To start the development server:
    uvicorn app.main:app --reload
    ```
 
+This is the version 1.0.0 of the project, I'll keep updating it.
+
+Be sure to checkout for the latest version 
+    ```bash
+    git stash
+    ```
+
 ### Disclaimer:
 
 This repository is created by Chumbacash and is intended for personal projects only. Use it at your own risk. Nothing in this repository constitutes financial advice.
