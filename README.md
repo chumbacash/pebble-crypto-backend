@@ -1,4 +1,4 @@
-![Banner Image](icons/banner.png)
+![Banner Image](icons/20250109_094420_0000.png )
 
 # Pebble Crypto Backend
 This is the backend service for the **Pebble Crypto** app, a cryptocurrency signals platform built using **FastAPI**.
