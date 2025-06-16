@@ -11,9 +11,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Import the FastAPI app from root main.py
-import sys
-sys.path.append('..')
-from main import app
+# Use absolute import path that works in deployment
+try:
+    # Try importing from the project root
+    from main import app
+except ImportError:
+    # Fallback: Add parent directory to path
+    import sys
+    import os
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from main import app
 
 # Export the app for ASGI servers
 __all__ = ["app"]
