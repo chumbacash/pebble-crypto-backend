@@ -10,16 +10,19 @@ import numpy as np
 import math
 
 from app.core.ai.gemini_client import GeminiInsightsGenerator
+from app.core.ai.llm_symbol_extractor import LLMSymbolExtractor
 from app.services.binance import BinanceClient
 from app.services.kucoin import KuCoinClient
 from app.services.bybit import BybitClient
 from app.services.gateio import GateIOClient
 from app.services.bitget import BitgetClient
+from app.services.okx import OKXClient
 from app.services.exchange_aggregator import ExchangeAggregator
 from app.core.indicators.advanced import BollingerBands, AverageTrueRange
 from app.core.indicators.order_book import OrderBookDepthAnalyzer
 from app.core.prediction.technical import predictor
 from app.core.analysis.market_advisor import MarketAdvisor
+from app.core.ai.multi_llm_router import MultiLLMRouter
 
 logger = logging.getLogger("CryptoPredictAPI")
 
@@ -31,15 +34,26 @@ class MarketAgent:
     """
     
     def __init__(self):
-        """Initialize the market agent with multi-exchange capabilities"""
+        """Initialize the market agent with multi-exchange capabilities and multi-LLM routing"""
+        # Initialize Multi-LLM Router for intelligent query distribution
+        self.llm_router = MultiLLMRouter()
+        
         # Initialize AI insights generator (optional)
         try:
             self.gemini = GeminiInsightsGenerator()
             self.gemini_available = True
+            # Register Gemini with the LLM router
+            self.llm_router.register_provider("gemini", self.gemini)
         except Exception as e:
             logger.warning(f"Gemini AI not available: {str(e)}")
             self.gemini = None
             self.gemini_available = False
+        
+        # Initialize LLM symbol extractor
+        self.llm_extractor = LLMSymbolExtractor()
+        
+        # Try to register additional LLM providers
+        self._setup_additional_llm_providers()
         
         # Initialize exchange clients
         self.binance = BinanceClient()
@@ -47,6 +61,7 @@ class MarketAgent:
         self.bybit = BybitClient()
         self.gateio = GateIOClient()
         self.bitget = BitgetClient()
+        self.okx = OKXClient()
         
         # Initialize exchange aggregator
         self.exchange_aggregator = ExchangeAggregator()
@@ -74,6 +89,28 @@ class MarketAgent:
             # No event loop running, will update symbols on first query
             pass
         
+    def _setup_additional_llm_providers(self):
+        """Setup additional LLM providers if available"""
+        try:
+            # Try to initialize OpenRouter (if credentials available)
+            from app.services.openrouter_client import OpenRouterClient
+            openrouter = OpenRouterClient()
+            if openrouter.is_available():
+                self.llm_router.register_provider("openrouter", openrouter)
+                logger.info("OpenRouter LLM provider registered")
+        except Exception as e:
+            logger.debug(f"OpenRouter not available: {str(e)}")
+        
+        try:
+            # Try to initialize Anthropic (if credentials available)
+            from app.services.anthropic_client import AnthropicClient
+            anthropic = AnthropicClient()
+            if anthropic.is_available():
+                self.llm_router.register_provider("anthropic", anthropic)
+                logger.info("Anthropic LLM provider registered")
+        except Exception as e:
+            logger.debug(f"Anthropic not available: {str(e)}")
+        
     def _register_exchanges(self):
         """Register all exchange clients with the aggregator"""
         try:
@@ -82,6 +119,7 @@ class MarketAgent:
             self.exchange_aggregator.register_exchange("bybit", self.bybit)
             self.exchange_aggregator.register_exchange("gateio", self.gateio)
             self.exchange_aggregator.register_exchange("bitget", self.bitget)
+            self.exchange_aggregator.register_exchange("okx", self.okx)
             logger.info("Successfully registered all exchanges with aggregator")
         except Exception as e:
             logger.error(f"Error registering exchanges: {str(e)}")
@@ -116,8 +154,14 @@ class MarketAgent:
         
     async def process_query(self, query: str) -> Dict[str, Any]:
         """
-        Process a natural language query about cryptocurrency markets
-        Returns a response with all the data used to generate it
+        Enhanced query processing implementing Anthropic's effective agent patterns:
+        
+        🎯 ROUTING: Smart query classification and complexity assessment
+        ⚡ PARALLELIZATION: Multi-asset data collection with sectioning
+        🔍 TRANSPARENCY: Explicit reasoning steps and confidence scoring
+        📊 EVALUATOR: Response quality assessment and optimization
+        
+        Based on: https://www.anthropic.com/engineering/building-effective-agents
         """
         try:
             # Ensure we have valid symbols
@@ -130,8 +174,8 @@ class MarketAgent:
                     # Add default major symbols as fallback
                     self.valid_symbols = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "ADAUSDT", "DOGEUSDT"]
             
-            # 1. Extract query information
-            query_info = self._extract_query_info(query)
+            # 1. Extract query information using LLM-powered extraction
+            query_info = await self.llm_extractor.extract_query_info(query, self.valid_symbols)
             
             # 2. Identify required data sources
             data_sources = self._determine_data_sources(query_info)
@@ -193,173 +237,9 @@ class MarketAgent:
                 "metadata": {"error": str(e)}
             }
     
-    def _extract_query_info(self, query: str) -> Dict[str, Any]:
-        """Extract symbol(s), timeframe, and query intent from the question"""
-        info = {
-            "symbols": [],  # Changed from "symbol" to "symbols" to support multiple
-            "primary_symbol": None,
-            "query_type": "single_asset",  # single_asset, multi_asset, comparison, portfolio
-            "interval": "1h",  # default
-            "intent": "general"
-        }
-        
-        # List of common coin abbreviations
-        common_coins = [
-            "BTC", "ETH", "USDT", "BNB", "XRP", "ADA", "SOL", "DOT", "DOGE", 
-            "AVAX", "MATIC", "SHIB", "LTC", "ATOM", "LINK", "UNI", "XLM", 
-            "BCH", "ALGO", "MANA", "SAND", "AXS", "GMT", "APE", "GALA", "THE"
-        ]
-        
-        # Enhanced symbol detection patterns
-        symbol_patterns = [
-            # Direct symbol mentions (e.g., "BTC", "BTCUSDT") - only match if uppercase in original
-            r'\b([A-Z]{2,10}USDT?)\b',
-            # Specific crypto symbols - only if they appear as standalone uppercase words
-            r'\b(BTC|ETH|SOL|BNB|XRP|ADA|DOT|DOGE|AVAX|MATIC|SHIB|LTC|ATOM|LINK|UNI|XLM|BCH|ALGO|MANA|SAND|AXS|GMT|APE|GALA|THE)\b',
-            # Full names with symbol extraction
-            r'\b(?:bitcoin|btc)\b',
-            r'\b(?:ethereum|eth)\b', 
-            r'\b(?:solana|sol)\b',
-            r'\b(?:binance\s+coin|bnb)\b',
-            r'\b(?:cardano|ada)\b',
-            r'\b(?:dogecoin|doge)\b'
-        ]
-        
-        # Common English words that should be excluded even if they match crypto patterns
-        excluded_words = {
-            "THE", "AND", "OR", "BUT", "FOR", "ARE", "WAS", "WERE", "BEEN", "HAVE", "HAS", "HAD",
-            "DO", "DOES", "DID", "WILL", "WOULD", "COULD", "SHOULD", "MAY", "MIGHT", "CAN",
-            "IS", "AM", "BE", "TO", "OF", "IN", "ON", "AT", "BY", "FROM", "WITH", "AS"
-        }
-        
-        detected_symbols = set()
-        
-        # Search for symbols using patterns
-        for i, pattern in enumerate(symbol_patterns):
-            matches = re.findall(pattern, query, re.IGNORECASE)
-            for match in matches:
-                if isinstance(match, tuple):
-                    match = match[0]
-                
-                # Clean up the match
-                match = match.upper()
-                
-                # Special handling for THE token - check crypto context first
-                if match == "THE" and i == 1:  # Only for the specific crypto symbols pattern
-                    crypto_context_words = r'\b(?:token|coin|crypto|price|trading|buy|sell|chart|market)\b'
-                    if not re.search(crypto_context_words, query, re.IGNORECASE):
-                        continue  # Skip THE if no crypto context
-                
-                # Skip if it's a common English word (unless it's THE with crypto context)
-                if i < 2 and match.replace("USDT", "") in excluded_words and not (match == "THE" and re.search(r'\b(?:token|coin|crypto|price|trading|buy|sell|chart|market)\b', query, re.IGNORECASE)):
-                    continue
-                
-                # For the specific crypto symbols pattern, check if word appears in uppercase in original query
-                if i == 1:  # The specific crypto symbols pattern
-                    # THE token already handled above
-                    if match != "THE" and not re.search(rf'\b{re.escape(match)}\b', query):
-                        continue
-                
-                if not match.endswith("USDT"):
-                    match = f"{match}USDT"
-                
-                # Validate against known symbols
-                if match in self.valid_symbols or match.replace("USDT", "") in common_coins:
-                    detected_symbols.add(match)
-        
-        # Convert to list and set primary symbol
-        info["symbols"] = list(detected_symbols)
-        if info["symbols"]:
-            info["primary_symbol"] = info["symbols"][0]
-        
-        # Determine query type based on patterns and number of symbols
-        multi_asset_patterns = [
-            r'\b(?:compare|vs|versus|against|better)\b',
-            r'\b(?:portfolio|diversify|allocation)\b',
-            r'\b(?:and|,)\b.*\b(?:BTC|ETH|SOL|ADA|DOGE)\b'
-        ]
-        
-        for pattern in multi_asset_patterns:
-            if re.search(pattern, query, re.IGNORECASE):
-                if len(info["symbols"]) > 1:
-                    if re.search(r'\b(?:compare|vs|versus|against|better)\b', query, re.IGNORECASE):
-                        info["query_type"] = "comparison"
-                    elif re.search(r'\b(?:portfolio|diversify|allocation)\b', query, re.IGNORECASE):
-                        info["query_type"] = "portfolio"
-                    else:
-                        info["query_type"] = "multi_asset"
-                break
-            
-        # If no symbols found, fallback to common detection
-        if not info["symbols"]:
-            # Check for any uppercase words that might be coins
-            for word in re.findall(r'\b[A-Z]{2,}\b', query):
-                if word in ["BTC", "ETH", "SOL"]:
-                    info["symbols"] = [f"{word}USDT"]
-                    info["primary_symbol"] = f"{word}USDT"
-                    break
-        
-        # Extract timeframe/interval
-        interval_patterns = {
-            r'\b1\s*hour\b|hourly|1h': '1h',
-            r'\b4\s*hours\b|4h': '4h',
-            r'\b1\s*day\b|daily|1d': '1d',
-            r'\b1\s*week\b|weekly|1w': '1w',
-            r'\b1\s*month\b|monthly|1M': '1M'
-        }
-        
-        for pattern, interval in interval_patterns.items():
-            if re.search(pattern, query, re.IGNORECASE):
-                info["interval"] = interval
-                break
-        
-        # Determine intent with more detailed classification
-        intent_patterns = {
-            r'price|worth|value|rate|cost': 'price',
-            r'trend|direction|moving': 'trend',
-            r'volatile|volatility|stable|atr': 'volatility',
-            r'support|resistance|level': 'levels',
-            r'prediction|forecast|expect|predict|future': 'prediction',
-            r'volume|liquidity|traded': 'volume',
-            r'order\s+book|buy\s+wall|sell\s+wall|depth': 'order_book',
-            r'technical|indicator|bollinger|rsi|macd': 'indicators',
-            r'analysis|insight|explain|why': 'analysis',
-            r'should\s+I\s+buy|should\s+I\s+sell|position|trade': 'advice',
-            r'compare|comparison|better|worse|vs|against': 'comparison',
-            r'portfolio|diversify|allocation|balance': 'portfolio'
-        }
-        
-        for pattern, intent in intent_patterns.items():
-            if re.search(pattern, query, re.IGNORECASE):
-                info["intent"] = intent
-                break
-                
-        # Adjust query type based on number of symbols found
-        if len(info["symbols"]) > 1:
-            if info["query_type"] == "single_asset":
-                info["query_type"] = "multi_asset"
-        elif len(info["symbols"]) == 0:
-            info["query_type"] = "general"
-                
-        # Make sure valid_symbols is not empty
-        if not self.valid_symbols:
-            # Add default major symbols as fallback
-            self.valid_symbols = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "ADAUSDT", "DOGEUSDT"]
-            
-        # Ensure we have a valid symbol for common cryptocurrencies
-        if not info["symbols"]:
-            # Check if query mentions Bitcoin, Ethereum, etc.
-            if re.search(r'\b(bitcoin|btc)\b', query, re.IGNORECASE):
-                info["symbols"] = ["BTCUSDT"]
-                info["primary_symbol"] = "BTCUSDT"
-            elif re.search(r'\b(ethereum|eth)\b', query, re.IGNORECASE):
-                info["symbols"] = ["ETHUSDT"] 
-                info["primary_symbol"] = "ETHUSDT"
-            elif re.search(r'\b(solana|sol)\b', query, re.IGNORECASE):
-                info["symbols"] = ["SOLUSDT"]
-                info["primary_symbol"] = "SOLUSDT"
-        
-        return info
+    # Note: _extract_query_info method removed - now using LLM-based extraction
+    # via self.llm_extractor.extract_query_info() for much more intelligent
+    # symbol detection and query understanding
     
     def _determine_data_sources(self, query_info: Dict[str, Any]) -> List[str]:
         """Determine which data sources are needed based on the query intent"""
@@ -850,9 +730,16 @@ class MarketAgent:
                     
                     response_parts.append(f"{symbol} is experiencing {vol_desc} with a volatility of {volatility:.2f}%.")
         
-        # Prediction/advice
+        # Prediction/advice - Use Enhanced Investment Advisor
         if intent in ["prediction", "advice"]:
-            response_parts.append("Based on current technical indicators, please consider your risk tolerance and do your own research before making any trading decisions.")
+            try:
+                from .enhanced_investment_advisor import EnhancedInvestmentAdvisor
+                advisor = EnhancedInvestmentAdvisor()
+                enhanced_advice = advisor.generate_investment_advice(query, data, query_info)
+                response_parts.append(enhanced_advice)
+            except Exception as e:
+                logger.error(f"Enhanced investment advisor failed: {str(e)}")
+                response_parts.append("Based on current technical indicators, please consider your risk tolerance and do your own research before making any trading decisions.")
         
         return " ".join(response_parts) if response_parts else f"Here's the current information for {symbol}: ${current_price:.4f}."
     

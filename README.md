@@ -1,389 +1,455 @@
+<<<<<<< HEAD
 ![Banner Image](static/images/20250109_094420_0000.png )
+=======
+# 🚀 Pebble Crypto Analytics API
+>>>>>>> 10e0e2c (update commit)
 
-# pebble-crypto-api
-This is the backend service for the **Pebble Crypto** app, a cryptocurrency signals platform built using **FastAPI**.
+![Banner Image](static/images/20250109_094420_0000.png)
 
-Advanced cryptocurrency prediction API with real-time analysis and AI-powered insights.
-
-> **⚠️ IMPORTANT NOTICE FOR DEVELOPERS**
+> **Advanced Cryptocurrency Analytics & AI-Powered Trading Assistant**
 > 
-> **This README may contain outdated information.** The project has undergone significant architectural changes and improvements. Before building a frontend or implementing integrations:
-> 
-> 1. **Check the `/docs` folder** for the most current implementation details
-> 2. **Run the test suite** to verify current functionality: `python -m pytest tests/`
-> 3. **Test endpoints manually** before relying on documented schemas
-> 4. **Review recent commits** for breaking changes
-> 
-> **For Frontend Developers:** See the [Frontend Integration Guide](#frontend-integration-guide) section below for current API contracts and testing procedures.
+> A production-ready FastAPI backend providing real-time market data, AI-powered analysis, and multi-exchange integration for cryptocurrency trading and analytics.
 
-## Features ✨
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![API Status](https://img.shields.io/badge/API-Production%20Ready-brightgreen.svg)](http://localhost:8000/docs)
 
-### Core Features
-- 📈 **Multi-Exchange Data**: Real-time data from 5+ cryptocurrency exchanges (Binance, KuCoin, Bybit, Gate.io, Bitget)
-- 🤖 **AI-Powered Analysis**: Natural language queries with Anthropic's agent design patterns
-- 📊 **Advanced Analytics**: Technical indicators, order book analysis, cross-exchange arbitrage detection
-- 🔍 **Multi-Asset Queries**: Analyze multiple cryptocurrencies simultaneously with parallel processing
-- 🌡️ **Market Health Monitoring**: Volatility, liquidity, and correlation analysis
-- 💹 **Portfolio Analytics**: Diversification scoring and risk assessment
+## 📋 Table of Contents
 
-### Technical Features
-- ⚡ **Async-First Architecture**: High concurrency with asyncio and FastAPI
-- 🧩 **Modular Design**: Clean separation of concerns with focused components
-- 🔒 **Rate Limiting**: Configurable limits per endpoint (60 RPM for AI queries)
-- 🧠 **Smart Caching**: OHLCV data and prediction caching with TTL
-- 📊 **Built-in Metrics**: Performance tracking and monitoring
-- 🛡️ **Error Resilience**: Automatic retries and graceful degradation
-- 🐳 **Docker Support**: Containerized deployment ready
+- [Features](#-features)
+- [Quick Start](#-quick-start)
+- [API Documentation](#-api-documentation)
+- [Installation](#-installation)
+- [Usage Examples](#-usage-examples)
+- [Project Structure](#-project-structure)
+- [Development](#-development)
+- [Testing](#-testing)
+- [Deployment](#-deployment)
+- [Contributing](#-contributing)
+- [License](#-license)
 
-## Frontend Integration Guide 🎨
+## ✨ Features
 
-### Current API Status
-The API has been **extensively tested** and verified to work with real market data. All endpoints return **production-ready responses**.
+### 🤖 **AI-Powered Analysis**
+- Natural language query processing for market insights
+- Investment advice with confidence scores and risk assessment
+- Multi-timeframe technical analysis with actionable recommendations
+- Context-aware responses based on user preferences
 
-### Key Endpoints for Frontend Integration
+### 📊 **Comprehensive Market Data** 
+- Real-time data from 6+ major cryptocurrency exchanges
+- 1,400+ trading pairs with live price updates
+- OHLCV data with configurable intervals (1h to 1M)
+- Advanced technical indicators (RSI, Bollinger Bands, Moving Averages)
 
-#### 1. AI Natural Language Queries (Primary Feature)
+### 🔄 **Multi-Exchange Integration**
+- Binance, KuCoin, Bybit, Gate.io, Bitget, OKX support
+- Cross-exchange price comparison and arbitrage detection
+- Automatic failover and load balancing
+- Real-time exchange health monitoring
+
+### ⚡ **Production Features**
+- Async-first architecture with high concurrency
+- Smart caching with TTL for optimal performance
+- Rate limiting and request throttling
+- WebSocket streaming for real-time updates
+- Comprehensive error handling and monitoring
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Python 3.8+
+- pip package manager
+
+### 1. Clone and Install
+```bash
+git clone https://github.com/your-org/pebble-crypto-backend.git
+cd pebble-crypto-backend
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### 2. Environment Setup
+```bash
+# Copy environment template
+cp .env.example .env
+
+# Edit configuration (optional - works with defaults)
+nano .env
+```
+
+### 3. Run the API
+```bash
+# Start the development server
+uvicorn main:app --reload --port 8000
+
+# Verify it's running
+curl http://localhost:8000/api/health
+```
+
+### 4. Explore the API
+- **Interactive Docs**: http://localhost:8000/docs
+- **Alternative Docs**: http://localhost:8000/redoc
+- **Health Check**: http://localhost:8000/api/health
+
+## 📚 API Documentation
+
+### 🏥 **System Health**
 ```http
-POST /api/ask
+GET /api/health
+```
+Get API status, version, and system health metrics.
+
+### 📊 **Market Data**
+```http
+GET /api/market/symbols                    # Get all trading symbols
+GET /api/market/data/{symbol}              # Comprehensive market data
+```
+
+### 🤖 **AI Assistant** 
+```http
+POST /api/ai/ask
 Content-Type: application/json
 
 {
-  "query": "What are the prices of BTC, ETH, and SOL?"
+  "query": "Should I buy Bitcoin now? What does the technical analysis say?",
+  "context": {"timeframe": "1d", "risk_tolerance": "moderate"}
 }
 ```
 
-**Response Format:**
-```json
-{
-  "response": "Analysis for 3 cryptocurrencies:\n\n• BTCUSDT: $105,231.91 (-3.23%)\n• ETHUSDT: $2,541.86 (-9.65%)\n• SOLUSDT: $151.86 (-6.63%)",
-  "query_info": {
-    "query_type": "multi_asset",
-    "symbols": ["BTCUSDT", "ETHUSDT", "SOLUSDT"],
-    "intent": "price_check"
-  }
-}
-```
-
-#### 2. Market Data Endpoints
+### 📈 **Technical Analysis**
 ```http
-# Get all trading symbols (1,452+ available)
-GET /api/symbols
-
-# Get price prediction with confidence scoring
-GET /api/predict/{symbol}?interval=1h
-
-# Get historical data with technical indicators
-GET /api/historical/{symbol}?interval=4h&limit=100
-
-# Get investment advice with entry/exit targets
-GET /api/investment-advice/{symbol}
-
-# Compare multiple assets
-GET /api/compare?symbols=BTCUSDT,ETHUSDT,SOLUSDT
+GET /api/analysis/predict/{symbol}         # Price predictions & signals
+GET /api/analysis/compare/{primary_symbol} # Multi-asset comparison
 ```
 
-#### 3. Multi-Exchange Features
+### 🔄 **Multi-Exchange**
 ```http
-# Check exchange health (5 exchanges monitored)
-GET /api/exchanges/health
-
-# Get best prices across exchanges
-GET /api/exchanges/best-prices/{symbol}
-
-# Get exchange coverage stats
-GET /api/exchanges/coverage
+GET /api/exchanges/health                  # Exchange status monitoring
+POST /api/exchanges/summary                # Market data aggregation
+POST /api/exchanges/arbitrage              # Arbitrage opportunities
+GET /api/exchanges/coverage                # Exchange information
 ```
 
-### Frontend Testing Checklist ✅
+### ⚡ **Real-Time Data**
+```javascript
+// WebSocket connection
+const ws = new WebSocket('ws://localhost:8000/api/ws/live/BTCUSDT?interval=1h');
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  console.log('Live update:', data);
+};
+```
 
-Before building your frontend, verify these endpoints work:
+## 🛠️ Installation
 
+### Standard Installation
 ```bash
-# 1. Test AI queries (most important)
-curl -X POST "http://localhost:8000/api/ask" \
-  -H "Content-Type: application/json" \
-  -d '{"query":"What is Bitcoin doing today?"}'
+# Clone the repository
+git clone https://github.com/your-org/pebble-crypto-backend.git
+cd pebble-crypto-backend
 
-# 2. Test multi-asset queries
-curl -X POST "http://localhost:8000/api/ask" \
-  -H "Content-Type: application/json" \
-  -d '{"query":"Compare BTC, ETH, and SOL prices"}'
+# Create virtual environment (recommended)
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# 3. Test market data
-curl "http://localhost:8000/api/symbols"
-curl "http://localhost:8000/api/predict/BTCUSDT"
+# Install dependencies
+pip install -r requirements.txt
 
-# 4. Test exchange health
-curl "http://localhost:8000/api/exchanges/health"
+# Run the application
+uvicorn main:app --reload --port 8000
 ```
 
-### Rate Limits for Frontend Planning
-- **AI Queries**: 60 requests/minute (1 per second)
-- **Market Data**: 30 requests/minute
-- **Symbols/Health**: 100 requests/minute
-- **WebSocket**: No limits (real-time streaming)
+### Docker Installation
+```bash
+# Using Docker Compose (recommended)
+docker-compose up -d
 
-## Environment Setup ⚙️
-The application uses a `.env` file for configuration, which is already set up. The environment variables include:
+# Or build manually
+docker build -t pebble-crypto-api .
+docker run -d -p 8000:8000 --env-file .env pebble-crypto-api
+```
+
+### Environment Configuration
+Create a `.env` file with the following configuration:
 
 ```ini
 # API Configuration
-BINANCE_API=https://api.binance.com/api/v3
-GEMINI_API_KEY=your_gemini_key_here
-CACHE_TTL=300  # 5 minutes
-
-# Server Configuration
 HOST=0.0.0.0
 PORT=8000
 RELOAD=true
 WORKERS=1
+ENVIRONMENT=development
+
+# Rate Limits
+AI_ASSISTANT_RATE_LIMIT=60/minute
+MARKET_DATA_RATE_LIMIT=30/minute
+HEALTH_CHECK_RATE_LIMIT=100/minute
 
 # Security
 ALLOWED_ORIGINS=*
-API_RATE_LIMIT=60/minute  # Updated for AI queries
-METRICS_INTERVAL=300  # 5 minutes
+
+# Optional: External API Keys
+GEMINI_API_KEY=your_gemini_key_here
+ANTHROPIC_API_KEY=your_anthropic_key_here
 ```
 
-## Project Structure 📁
-```text
+## 💡 Usage Examples
+
+### AI-Powered Market Queries
+```python
+import requests
+
+# Natural language market analysis
+response = requests.post('http://localhost:8000/api/ai/ask', json={
+    "query": "What's the best cryptocurrency to buy today under $100?",
+    "context": {"risk_tolerance": "moderate", "timeframe": "1w"}
+})
+
+analysis = response.json()
+print(analysis['response'])
+```
+
+### Multi-Asset Price Comparison
+```python
+# Compare multiple cryptocurrencies
+response = requests.get(
+    'http://localhost:8000/api/analysis/compare/BTCUSDT',
+    params={
+        'comparison_symbols': 'ETHUSDT,SOLUSDT,ADAUSDT',
+        'time_period': '7d'
+    }
+)
+
+comparison = response.json()
+```
+
+### Real-Time Market Data
+```python
+import asyncio
+import websockets
+import json
+
+async def live_market_feed():
+    uri = "ws://localhost:8000/api/ws/live/BTCUSDT?interval=1h"
+    async with websockets.connect(uri) as websocket:
+        while True:
+            data = await websocket.recv()
+            market_update = json.loads(data)
+            print(f"BTC Price: ${market_update['data']['close']}")
+
+# Run the live feed
+asyncio.run(live_market_feed())
+```
+
+### Multi-Exchange Arbitrage Detection
+```python
+# Find arbitrage opportunities
+response = requests.post('http://localhost:8000/api/exchanges/arbitrage', json={
+    "symbols": ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+})
+
+opportunities = response.json()
+for opportunity in opportunities.get('arbitrage_opportunities', []):
+    print(f"{opportunity['symbol']}: {opportunity['profit_potential']:.2f}% profit potential")
+```
+
+## 📁 Project Structure
+
+```
 pebble-crypto-backend/
-├── app/                      # Main application package
-│   ├── api/                  # API interface
-│   │   └── routes/           # Route definitions
-│   │       ├── ai_agent.py   # Natural language query endpoint
-│   │       ├── health.py     # Health check endpoint
-│   │       ├── market_data.py # Market data endpoints
-│   │       ├── predictions.py # Prediction endpoints
-│   │       └── websockets.py  # WebSocket handlers
-│   ├── core/                 # Core business logic
-│   │   ├── ai/               # AI components (Anthropic patterns)
-│   │   │   ├── agent.py      # AI agent orchestration
-│   │   │   └── gemini_client.py # Gemini integration
-│   │   ├── indicators/       # Technical indicators
-│   │   │   ├── advanced/     # Advanced indicators (Bollinger, ATR)
-│   │   │   └── order_book/   # Order book analytics
-│   │   └── prediction/       # Prediction models
-│   │       └── technical.py  # Technical analysis models
-│   ├── services/             # External services
-│   │   ├── binance.py        # Binance API client
-│   │   ├── kucoin.py         # KuCoin API client
-│   │   ├── bybit.py          # Bybit API client
-│   │   ├── gateio.py         # Gate.io API client
-│   │   ├── bitget.py         # Bitget API client
-│   │   ├── exchange_aggregator.py # Multi-exchange orchestration
-│   │   └── metrics.py        # Performance tracking
-│   └── main.py               # FastAPI entry point (DEPRECATED)
-├── docs/                     # 📚 COMPREHENSIVE DOCUMENTATION
-│   ├── MULTI_EXCHANGE_IMPLEMENTATION_PLAN.md
-│   ├── MULTI_ASSET_IMPROVEMENTS.md
-│   └── API_TESTING_GUIDE.md  # (See docs folder)
-├── tests/                    # 🧪 EXTENSIVE TEST SUITE
-│   ├── test_api_endpoints.py # API endpoint testing
-│   ├── test_data_quality.py  # Data quality verification
-│   ├── test_multi_exchange_integration.py # Exchange integration
-│   ├── test_multi_asset_queries.py # Multi-asset query testing
-│   └── test_individual_exchanges.py # Individual exchange tests
-├── static/                   # Static assets
-├── main.py                   # 🚀 CURRENT ENTRY POINT
-├── .env                      # Environment configuration
-├── Dockerfile                # Docker image definition
-└── docker-compose.yml        # Docker Compose configuration
+├── 📚 Core Application
+│   ├── main.py                    # FastAPI application entry point
+│   └── app/
+│       ├── core/
+│       │   ├── ai/                # AI assistant components
+│       │   │   ├── agent.py       # Market analysis agent
+│       │   │   ├── enhanced_investment_advisor.py
+│       │   │   └── multi_llm_router.py
+│       │   ├── analysis/          # Market analysis tools
+│       │   ├── indicators/        # Technical indicators
+│       │   └── prediction/        # Price prediction models
+│       └── services/
+│           ├── binance.py         # Binance integration
+│           ├── kucoin.py          # KuCoin integration
+│           ├── exchange_aggregator.py # Multi-exchange orchestration
+│           └── metrics.py         # Performance monitoring
+├── 🧪 Testing & Quality Assurance
+│   └── tests/
+│       ├── test_complete_system.py     # End-to-end testing
+│       ├── test_system_direct.py       # Direct API testing
+│       └── test_data_quality.py        # Data quality validation
+├── 🐳 Deployment
+│   ├── Dockerfile
+│   ├── docker-compose.yml
+│   └── .env.example
+└── 📖 Documentation
+    ├── README.md
+    └── static/images/
 ```
 
-## API Endpoints 📡
+## 🔧 Development
 
-> **⚠️ Schema Verification Required**
-> 
-> The endpoints below have been tested and verified to work. However, **response schemas may have evolved**. Always test endpoints before implementing frontend integration.
-
-| Endpoint          | Method | Description                     | Rate Limit   | Status |
-|-------------------|--------|---------------------------------|--------------|--------|
-| `/api/ask`        | POST   | 🤖 Natural language queries     | 60/min       | ✅ Verified |
-| `/api/health`     | GET    | API health check                | 100/min      | ✅ Verified |
-| `/api/symbols`    | GET    | Active trading pairs (1,452+)   | 100/min      | ✅ Verified |
-| `/api/predict/{symbol}` | GET | Price prediction + AI analysis | 30/min       | ✅ Verified |
-| `/api/historical/{symbol}` | GET | Historical data with indicators | 20/min    | ✅ Verified |
-| `/api/investment-advice/{symbol}` | GET | Investment recommendations | 30/min | ✅ Verified |
-| `/api/compare`    | GET    | Multi-asset comparison          | 30/min       | ✅ Verified |
-| `/api/exchanges/health` | GET | Exchange status monitoring    | 100/min      | ✅ Verified |
-| `/api/exchanges/best-prices/{symbol}` | GET | Cross-exchange price comparison | 30/min | ✅ Verified |
-| `/api/exchanges/coverage` | GET | Exchange coverage statistics | 100/min | ✅ Verified |
-| `/ws/realtime/{symbol}` | WS | Real-time price streaming     | No limit     | ⚠️ Legacy |
-
-## Natural Language Queries 🗣️
-
-The AI agent supports sophisticated natural language queries using **Anthropic's agent design patterns**:
-
-### Query Types Supported
-1. **Single Asset**: "What is Bitcoin's price?"
-2. **Multi-Asset**: "How are BTC, ETH, and SOL performing?"
-3. **Comparison**: "Which is better: Bitcoin or Ethereum?"
-4. **Portfolio**: "Analyze my BTC and ETH portfolio"
-
-### Example Queries
-```javascript
-// Frontend integration examples
-const queries = [
-  "What is the current price of BTC?",
-  "Compare Bitcoin and Ethereum performance",
-  "How volatile is Solana today?",
-  "Should I buy or sell SOL right now?",
-  "What are the best altcoins under $1?",
-  "Find arbitrage opportunities for MATIC",
-  "Analyze correlation between BTC and ETH"
-];
-
-// Send query to API
-const response = await fetch('/api/ask', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ query: queries[0] })
-});
-```
-
-## Testing & Quality Assurance 🧪
-
-### Comprehensive Test Suite
-The project includes **extensive testing** covering:
-
-- **API Endpoints**: All endpoints tested with real data
-- **Data Quality**: Market data accuracy verification
-- **Multi-Exchange**: Cross-exchange integration testing
-- **AI Queries**: Natural language processing validation
-- **Individual Exchanges**: Per-exchange functionality testing
-
-### Running Tests
+### Development Setup
 ```bash
-# Run all tests
-python -m pytest tests/ -v
+# Install development dependencies
+pip install -r requirements-dev.txt
 
-# Run specific test categories
-python -m pytest tests/test_api_endpoints.py -v
-python -m pytest tests/test_data_quality.py -v
-python -m pytest tests/test_multi_asset_queries.py -v
-
-# Run with coverage
-python -m pytest tests/ --cov=app --cov-report=html
-```
-
-### Test Results Summary
-- **✅ 100% Success Rate** across all endpoints
-- **✅ Real Market Data** verified from 5+ exchanges
-- **✅ AI Query Processing** tested with multiple scenarios
-- **✅ Multi-Asset Queries** validated with parallel processing
-- **✅ Error Handling** confirmed with graceful degradation
-
-## Supported Timeframes ⏰
-The API supports the following timeframes for data retrieval and analysis:
-
-- **Minutes**: 1m, 3m, 5m, 15m, 30m
-- **Hours**: 1h, 2h, 4h, 6h, 8h, 12h
-- **Days**: 1d, 3d
-- **Weeks**: 1w
-- **Months**: 1M
-
-Use these interval values with the `/predict`, `/historical`, and streaming endpoints.
-
-## Development 🛠️
-
-### Quick Start
-```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Run the application (CURRENT METHOD)
+# Run with auto-reload
 uvicorn main:app --reload --port 8000
 
-# Verify it's working
-curl http://localhost:8000/api/health
+# Run in development mode with detailed logging
+export ENVIRONMENT=development
+uvicorn main:app --reload --log-level debug
 ```
 
-### Development Workflow
-1. **Start the server**: `uvicorn main:app --reload --port 8000`
-2. **Run tests**: `python -m pytest tests/ -v`
-3. **Check API docs**: Visit `http://localhost:8000/docs`
-4. **Test AI queries**: Use the `/api/ask` endpoint
-5. **Monitor logs**: Check console output for errors
-
-## Docker Deployment 🐳
+### Code Quality
 ```bash
-# Build and start the container
-docker-compose up -d
+# Format code
+black .
 
-# View logs
-docker-compose logs -f
+# Lint code
+flake8 .
 
-# Stop the container
-docker-compose down
+# Type checking
+mypy app/
+
+# Security check
+bandit -r app/
 ```
 
-### Building and Running with Docker Manually
+### Adding New Features
+1. Create feature branch: `git checkout -b feature/new-feature`
+2. Implement changes in the appropriate `app/` subdirectory
+3. Add comprehensive tests in `tests/`
+4. Update API documentation
+5. Submit pull request
+
+## 🧪 Testing
+
+### Run All Tests
 ```bash
-# Build the Docker image
-docker build -t pebble-crypto-api .
+# Run the complete test suite
+python -m pytest tests/ -v
 
-# Run the container
-docker run -d -p 8000:8000 --env-file .env --name pebble-crypto-api pebble-crypto-api
+# Run with coverage report
+python -m pytest tests/ --cov=app --cov-report=html
+
+# Run specific test categories
+python -m pytest tests/test_complete_system.py -v      # System tests
+python -m pytest tests/test_data_quality.py -v        # Data quality
+python -m pytest tests/test_system_direct.py -v       # Direct API tests
 ```
 
-## Documentation 📚
+### Test Categories
+- **System Tests**: End-to-end API functionality
+- **Data Quality**: Market data accuracy and completeness
+- **Integration Tests**: Multi-exchange and AI components
+- **Performance Tests**: Load testing and response times
 
-### Comprehensive Docs Available
-The `/docs` folder contains detailed documentation:
+### Test Results
+- ✅ **100% Success Rate** across all endpoints
+- ✅ **Real Market Data** validated from 6+ exchanges
+- ✅ **AI Processing** tested with diverse query types
+- ✅ **Error Handling** verified with edge cases
 
-- **`MULTI_EXCHANGE_IMPLEMENTATION_PLAN.md`**: Multi-exchange architecture and implementation details
-- **`MULTI_ASSET_IMPROVEMENTS.md`**: AI agent enhancements and Anthropic design patterns
-- **Additional guides**: API testing, frontend integration, and deployment
+## 🚀 Deployment
 
-### Before Building Frontend
-1. **Read the docs folder** for current implementation details
-2. **Run the test suite** to verify functionality
-3. **Test endpoints manually** with curl or Postman
-4. **Check recent commits** for any breaking changes
+### Production Deployment
+```bash
+# Using Docker Compose (recommended)
+docker-compose -f docker-compose.prod.yml up -d
 
-## Error Handling ❗
-Standard error response format:
-```json
-{
-  "error": "Error Type",
-  "detail": "Human-readable description",
-  "timestamp": "ISO-8601 datetime",
-  "exchange_status": {
-    "binance": "healthy",
-    "kucoin": "healthy",
-    "bybit": "degraded"
-  }
-}
+# Scale for high availability
+docker-compose up --scale api=3
 ```
 
-## Production Readiness ✅
+### Environment Variables
+```bash
+# Production settings
+ENVIRONMENT=production
+WORKERS=4
+RELOAD=false
+LOG_LEVEL=info
 
-### Verified Features
-- **✅ Real-time data** from 5+ exchanges
-- **✅ AI-powered analysis** with natural language processing
-- **✅ Multi-asset queries** with parallel processing
-- **✅ Cross-exchange arbitrage** detection
-- **✅ Technical indicators** with confidence scoring
-- **✅ Error resilience** with graceful degradation
-- **✅ Rate limiting** and caching
-- **✅ Comprehensive testing** with 100% success rate
+# Security
+ALLOWED_ORIGINS=https://your-frontend-domain.com
+API_RATE_LIMIT=100/minute
+```
 
-### Performance Metrics
-- **Response Time**: 0.3-2ms for market data
-- **AI Query Processing**: <2 seconds for complex multi-asset queries
-- **Exchange Coverage**: 3,500+ trading pairs across 5 exchanges
-- **Uptime**: 99.9% with automatic failover
+### Health Monitoring
+```bash
+# Check API health
+curl https://api.your-domain.com/api/health
 
-## License 📄
-MIT License - See [LICENSE](LICENSE) for details
+# Monitor exchange connectivity
+curl https://api.your-domain.com/api/exchanges/health
+```
 
-> **⚠️ Disclaimer**  
-> This is not financial advice. Cryptocurrency trading carries significant risk. Always verify data accuracy and test thoroughly before making trading decisions.
+## 📊 API Rate Limits
+
+| Endpoint Category | Rate Limit | Purpose |
+|-------------------|------------|---------|
+| 🤖 AI Assistant | 60/minute | Natural language processing |
+| 📊 Market Data | 30/minute | Real-time market information |
+| 📈 Technical Analysis | 20-30/minute | Complex calculations |
+| 🔄 Multi-Exchange | 15-20/minute | Cross-exchange operations |
+| 🏥 Health Check | 100/minute | System monitoring |
+| ⚡ WebSocket | Unlimited | Real-time streaming |
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+
+### Quick Contribution Guide
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Make your changes and add tests
+4. Ensure all tests pass: `python -m pytest tests/ -v`
+5. Commit your changes: `git commit -m 'Add amazing feature'`
+6. Push to the branch: `git push origin feature/amazing-feature`
+7. Open a Pull Request
+
+### Development Standards
+- Write comprehensive tests for new features
+- Follow Python PEP 8 style guidelines
+- Add docstrings for all functions and classes
+- Update documentation for API changes
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## ⚠️ Disclaimer
+
+This software is for informational purposes only. Cryptocurrency trading carries significant financial risk. Always conduct your own research and consult with financial advisors before making investment decisions. The authors are not responsible for any financial losses incurred through the use of this software.
+
+## 🆘 Support
+
+- **Documentation**: Visit http://localhost:8000/docs for interactive API documentation
+- **Issues**: Report bugs and request features on our [GitHub Issues](https://github.com/your-org/pebble-crypto-backend/issues)
+- **Discussions**: Join our [GitHub Discussions](https://github.com/your-org/pebble-crypto-backend/discussions) for community support
+
+## 🎯 Roadmap
+
+- [ ] **Advanced ML Models**: Integration of machine learning prediction models
+- [ ] **Social Sentiment Analysis**: Twitter and Reddit sentiment integration  
+- [ ] **Portfolio Management**: Advanced portfolio optimization tools
+- [ ] **Mobile API**: React Native/Flutter optimized endpoints
+- [ ] **Enterprise Features**: Multi-tenant support and advanced analytics
 
 ---
 
+<<<<<<< HEAD
 **For the most up-to-date information, always check:**
 1. 📚 `/docs` folder for detailed documentation
 2. 🧪 `/tests` folder for current functionality verification  
 3. 🔄 Recent commits for breaking changes
 4. 📊 API documentation at `http://localhost:8000/docs`
+=======
+**Made with ❤️ by the Pebble Crypto Team**
+
+*For the latest updates and detailed API documentation, visit http://localhost:8000/docs*
+>>>>>>> 10e0e2c (update commit)

@@ -328,13 +328,13 @@ class BitgetClient:
                 if product_type == "spot":
                     return {
                         "symbol": symbol,
-                        "price": float(ticker_data.get("close", 0)) if ticker_data.get("close") else 0,
+                        "price": float(ticker_data.get("lastPr", 0)) if ticker_data.get("lastPr") else 0,
                         "bid": float(ticker_data.get("bidPr", 0)) if ticker_data.get("bidPr") else 0,
                         "ask": float(ticker_data.get("askPr", 0)) if ticker_data.get("askPr") else 0,
                         "high24h": float(ticker_data.get("high24h", 0)) if ticker_data.get("high24h") else 0,
                         "low24h": float(ticker_data.get("low24h", 0)) if ticker_data.get("low24h") else 0,
-                        "volume24h": float(ticker_data.get("baseVol", 0)) if ticker_data.get("baseVol") else 0,
-                        "priceChangePercent": float(ticker_data.get("changeUtc", 0)) if ticker_data.get("changeUtc") else 0,
+                        "volume24h": float(ticker_data.get("baseVolume", 0)) if ticker_data.get("baseVolume") else 0,
+                        "priceChangePercent": float(ticker_data.get("changeUtc24h", 0)) if ticker_data.get("changeUtc24h") else 0,
                         "product_type": "spot"
                     }
                 else:  # futures

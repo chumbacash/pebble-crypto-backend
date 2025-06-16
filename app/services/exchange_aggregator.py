@@ -91,6 +91,13 @@ class ExchangeAggregator:
                 rate_limit=150,
                 timeout=10,
                 retry_attempts=2
+            ),
+            "okx": ExchangeConfig(
+                name="okx",
+                priority=6,
+                rate_limit=300,  # OKX has good rate limits
+                timeout=8,
+                retry_attempts=3
             )
         }
     
@@ -291,9 +298,6 @@ class ExchangeAggregator:
     
     async def _fetch_from_exchange(self, exchange_name: str, symbol: str) -> Optional[MarketData]:
         """Fetch data from a specific exchange (to be implemented per exchange)"""
-        # This is a placeholder - each exchange will have its own implementation
-        # For now, we'll assume the exchange client has a standard interface
-        
         exchange_client = self.exchanges[exchange_name]
         config = self.exchange_configs[exchange_name]
         
@@ -305,15 +309,33 @@ class ExchangeAggregator:
             )
             
             if data:
+                # Map exchange-specific field names to standardized MarketData structure
+                current_price = data.get("price", 0)
+                
+                # Map 24h price change (percentage or absolute)
+                price_change_24h = None
+                if "priceChangePercent" in data:
+                    # Convert percentage to absolute change
+                    price_change_24h = (float(data["priceChangePercent"]) / 100) * current_price
+                elif "priceChange" in data:
+                    price_change_24h = data["priceChange"]
+                
+                # Map 24h high/low
+                high_24h = data.get("high24h") or data.get("high") or None
+                low_24h = data.get("low24h") or data.get("low") or None
+                
+                # Map 24h volume
+                volume_24h = data.get("volume24h") or data.get("volume") or data.get("vol") or None
+                
                 return MarketData(
                     symbol=symbol,
                     exchange=exchange_name,
                     timestamp=datetime.now(timezone.utc),
-                    current_price=data.get("price", 0),
-                    price_change_24h=data.get("price_change_24h"),
-                    high_24h=data.get("high_24h"),
-                    low_24h=data.get("low_24h"),
-                    volume_24h=data.get("volume_24h")
+                    current_price=float(current_price) if current_price else 0,
+                    price_change_24h=float(price_change_24h) if price_change_24h else None,
+                    high_24h=float(high_24h) if high_24h else None,
+                    low_24h=float(low_24h) if low_24h else None,
+                    volume_24h=float(volume_24h) if volume_24h else None
                 )
             
         except asyncio.TimeoutError:
@@ -324,27 +346,64 @@ class ExchangeAggregator:
         return None
     
     async def _call_exchange_api(self, exchange_client, symbol: str) -> Optional[Dict[str, Any]]:
-        """Call the exchange API with proper method detection"""
+        """Call the exchange API with proper method detection and enhanced data fetching"""
         
-        # Try different ticker method names in order of preference
-        ticker_methods = ['get_ticker', 'fetch_ticker', 'ticker']
+        exchange_type = type(exchange_client).__name__
         
-        for method_name in ticker_methods:
-            if hasattr(exchange_client, method_name):
-                try:
-                    method = getattr(exchange_client, method_name)
-                    if asyncio.iscoroutinefunction(method):
-                        result = await method(symbol)
-                    else:
-                        result = await asyncio.to_thread(method, symbol)
-                    
-                    if result:
-                        return result
-                except Exception as e:
-                    logger.debug(f"Error calling {method_name} on exchange: {str(e)}")
-                    continue
+        # Special handling for each exchange type
+        if exchange_type == 'OKXClient':
+            try:
+                result = await exchange_client.get_ticker(symbol)
+                if result:
+                    return result
+            except Exception as e:
+                logger.debug(f"Error calling get_ticker on OKX: {str(e)}")
         
-        logger.warning(f"Exchange client {type(exchange_client).__name__} doesn't have a recognized ticker method")
+        elif exchange_type == 'KuCoinClient':
+            # For KuCoin, try to get full 24h ticker data instead of just level1
+            try:
+                # Get all tickers and find our symbol
+                all_tickers = await exchange_client.fetch_tickers_async()
+                kucoin_symbol = exchange_client._convert_symbol_format(symbol)
+                
+                for ticker in all_tickers:
+                    if ticker['symbol'] == kucoin_symbol:
+                        return {
+                            "symbol": symbol,
+                            "price": ticker['price'],
+                            "priceChangePercent": ticker['priceChangePercent'],
+                            "high24h": ticker['high'],
+                            "low24h": ticker['low'],
+                            "volume24h": ticker['volume']
+                        }
+                
+                # Fallback to level1 if not found in tickers
+                result = await exchange_client.get_ticker(symbol)
+                if result:
+                    return result
+            except Exception as e:
+                logger.debug(f"Error getting KuCoin ticker data: {str(e)}")
+        
+        else:
+            # Try standard method names for other exchanges
+            ticker_methods = ['get_ticker', 'fetch_ticker', 'ticker']
+            
+            for method_name in ticker_methods:
+                if hasattr(exchange_client, method_name):
+                    try:
+                        method = getattr(exchange_client, method_name)
+                        if asyncio.iscoroutinefunction(method):
+                            result = await method(symbol)
+                        else:
+                            result = await asyncio.to_thread(method, symbol)
+                        
+                        if result:
+                            return result
+                    except Exception as e:
+                        logger.debug(f"Error calling {method_name} on {exchange_type}: {str(e)}")
+                        continue
+        
+        logger.warning(f"Failed to get ticker data from {exchange_type} for {symbol}")
         return None
     
     async def _handle_exchange_error(self, exchange_name: str, error: Exception):

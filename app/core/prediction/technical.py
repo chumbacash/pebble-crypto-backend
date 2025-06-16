@@ -497,11 +497,11 @@ class AdvancedPredictor:
                 except Exception as e:
                     logger.error(f"Gemini analysis failed: {str(e)}")
                     gemini_analysis = {
-                        "market_summary": "AI analysis temporarily unavailable",
-                        "technical_observations": ["Technical indicators show current market conditions"],
-                        "trading_recommendations": ["Monitor technical indicators for trading signals"],
-                        "risk_factors": ["Market volatility and external factors"]
-                    }
+                            "market_summary": "AI analysis temporarily unavailable",
+                            "technical_observations": ["Technical indicators show current market conditions"],
+                            "trading_recommendations": ["Monitor technical indicators for trading signals"],
+                            "risk_factors": ["Market volatility and external factors"]
+                        }
             else:
                 # Fallback analysis without AI
                 gemini_analysis = {

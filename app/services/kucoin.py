@@ -184,16 +184,24 @@ class KuCoinClient:
                 # Convert to standard format
                 standardized_tickers = []
                 for ticker in tickers:
-                    standardized_tickers.append({
-                        "symbol": ticker["symbol"],
-                        "price": float(ticker["last"]),
-                        "priceChange": float(ticker["changePrice"]) if ticker["changePrice"] else 0,
-                        "priceChangePercent": float(ticker["changeRate"]) * 100 if ticker["changeRate"] else 0,
-                        "high": float(ticker["high"]) if ticker["high"] else 0,
-                        "low": float(ticker["low"]) if ticker["low"] else 0,
-                        "volume": float(ticker["vol"]) if ticker["vol"] else 0,
-                        "quoteVolume": float(ticker["volValue"]) if ticker["volValue"] else 0,
-                    })
+                    try:
+                        # Skip tickers with missing essential data
+                        if not ticker.get("last") or not ticker.get("symbol"):
+                            continue
+                            
+                        standardized_tickers.append({
+                            "symbol": ticker["symbol"],
+                            "price": float(ticker["last"]) if ticker["last"] else 0,
+                            "priceChange": float(ticker["changePrice"]) if ticker.get("changePrice") and ticker["changePrice"] else 0,
+                            "priceChangePercent": float(ticker["changeRate"]) * 100 if ticker.get("changeRate") and ticker["changeRate"] else 0,
+                            "high": float(ticker["high"]) if ticker.get("high") and ticker["high"] else 0,
+                            "low": float(ticker["low"]) if ticker.get("low") and ticker["low"] else 0,
+                            "volume": float(ticker["vol"]) if ticker.get("vol") and ticker["vol"] else 0,
+                            "quoteVolume": float(ticker["volValue"]) if ticker.get("volValue") and ticker["volValue"] else 0,
+                        })
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"Error processing KuCoin ticker for {ticker.get('symbol', 'unknown')}: {str(e)}")
+                        continue
                 
                 TICKER_CACHE[cache_key] = standardized_tickers
                 TICKER_CACHE['last_updated'] = datetime.now(timezone.utc).isoformat()
