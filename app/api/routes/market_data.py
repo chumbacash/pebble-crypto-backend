@@ -1,21 +1,20 @@
-# Market data endpoints
+"""
+Market data endpoints for cryptocurrency information
+"""
 
-from fastapi import APIRouter, HTTPException, Request
-from typing import Optional, List
+from fastapi import APIRouter, HTTPException, Request, Depends
+from typing import Optional
 from datetime import datetime, timezone
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+
+from app.core.dependencies import (
+    get_binance_client, get_allowed_intervals, get_interval_hours, get_settings
+)
 from app.services.binance import BinanceClient, SYMBOLS_CACHE
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
-
-ALLOWED_INTERVALS = ["1h", "2h", "4h", "6h", "8h", "12h", "1d", "3d", "1w", "1M"]
-INTERVAL_HOURS = {
-    "1h": 1, "2h": 2, "4h": 4, "6h": 6, "8h": 8, "12h": 12, "1d": 24, "3d": 72, "1w": 168, "1M": 720
-}
-
-binance = BinanceClient()
 
 @router.get("/symbols", tags=["Market Data"])
 @limiter.limit("30/minute")
@@ -25,7 +24,8 @@ async def get_active_symbols(
     descending: bool = True,
     quote_asset: Optional[str] = None,
     search: Optional[str] = None,
-    limit: int = 500
+    limit: int = 500,
+    binance: BinanceClient = Depends(get_binance_client)
 ):
     """
     Get list of available trading symbols.
@@ -85,7 +85,18 @@ async def get_active_symbols(
 
 @router.get("/intraday/{symbol}", tags=["Market Data"])
 @limiter.limit("30/minute")
-async def get_intraday_data(request: Request, symbol: str, interval: str = "1h"):
+async def get_intraday_data(
+    request: Request, 
+    symbol: str, 
+    interval: str = "1h",
+    binance: BinanceClient = Depends(get_binance_client),
+    allowed_intervals: list = Depends(get_allowed_intervals),
+    interval_hours: dict = Depends(get_interval_hours)
+):
+    """
+    Returns intraday data for the given symbol based on the specified interval for the current day.
+    Data points are fetched from midnight (UTC) until the current time.
+    """
     try:
         symbol = symbol.upper()
         cache_key = "symbols"
@@ -99,24 +110,28 @@ async def get_intraday_data(request: Request, symbol: str, interval: str = "1h")
                 detail=f"Symbol {symbol} not found. Please check available symbols with /symbols endpoint."
             )
             
-        if interval not in ALLOWED_INTERVALS:
+        if interval not in allowed_intervals:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid interval. Allowed values: {', '.join(ALLOWED_INTERVALS)}"
+                detail=f"Invalid interval. Allowed values: {', '.join(allowed_intervals)}"
             )
+            
         now = datetime.now(timezone.utc)
         start_of_day = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
-        interval_hours = INTERVAL_HOURS[interval]
-        intervals_elapsed = int((now - start_of_day).total_seconds() / (interval_hours * 3600)) + 1
+        interval_hours_val = interval_hours[interval]
+        intervals_elapsed = int((now - start_of_day).total_seconds() / (interval_hours_val * 3600)) + 1
         limit = min(intervals_elapsed, 500)
+        
         data = await binance.fetch_ohlcv(symbol, interval, limit=limit)
         if not data:
             raise HTTPException(status_code=404, detail="No intraday data available")
+            
         intraday = []
         for candle in data:
             candle_time = datetime.fromtimestamp(candle["timestamp"] / 1000, tz=timezone.utc)
             if candle_time >= start_of_day:
                 intraday.append(candle)
+                
         return {
             "symbol": symbol,
             "interval": interval,
@@ -132,7 +147,18 @@ async def get_intraday_data(request: Request, symbol: str, interval: str = "1h")
 
 @router.get("/historical/{symbol}", tags=["Market Data"])
 @limiter.limit("20/minute")
-async def get_historical_data(request: Request, symbol: str, interval: str = "1h", limit: int = 100):
+async def get_historical_data(
+    request: Request, 
+    symbol: str, 
+    interval: str = "1h", 
+    limit: int = 100,
+    binance: BinanceClient = Depends(get_binance_client),
+    allowed_intervals: list = Depends(get_allowed_intervals)
+):
+    """
+    Returns historical data for the given symbol and interval.
+    Allows specifying the number of candles to retrieve.
+    """
     try:
         symbol = symbol.upper()
         cache_key = "symbols"
@@ -146,19 +172,22 @@ async def get_historical_data(request: Request, symbol: str, interval: str = "1h
                 detail=f"Symbol {symbol} not found. Please check available symbols with /symbols endpoint."
             )
             
-        if interval not in ALLOWED_INTERVALS:
+        if interval not in allowed_intervals:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid interval. Allowed values: {', '.join(ALLOWED_INTERVALS)}"
+                detail=f"Invalid interval. Allowed values: {', '.join(allowed_intervals)}"
             )
+            
         if limit < 1 or limit > 1000:
             raise HTTPException(
                 status_code=400,
                 detail="Limit must be between 1 and 1000"
             )
+            
         data = await binance.fetch_ohlcv(symbol, interval, limit=limit)
         if not data:
             raise HTTPException(status_code=404, detail="No historical data available")
+            
         return {
             "symbol": symbol,
             "interval": interval,
@@ -173,7 +202,11 @@ async def get_historical_data(request: Request, symbol: str, interval: str = "1h
 
 @router.get("/symbol/{symbol}/info", tags=["Market Data"])
 @limiter.limit("30/minute")
-async def get_symbol_info(request: Request, symbol: str):
+async def get_symbol_info(
+    request: Request, 
+    symbol: str,
+    binance: BinanceClient = Depends(get_binance_client)
+):
     """
     Get detailed information about a specific trading symbol.
     """
@@ -201,31 +234,27 @@ async def get_symbol_info(request: Request, symbol: str):
                 quote_asset = quote
                 base_asset = symbol[:-len(quote)]
                 break
-                
-        # If still not found, use reasonable defaults
+        
         if not base_asset:
-            if len(symbol) >= 6:
-                quote_asset = symbol[-4:]
-                base_asset = symbol[:-4]
-            else:
-                quote_asset = "UNKNOWN"
-                base_asset = symbol
+            # Fallback for unknown quote assets
+            base_asset = symbol[:-4] if len(symbol) > 4 else symbol
+            quote_asset = symbol[-4:] if len(symbol) > 4 else ""
         
-        # Get ticker data
-        tickers = binance.fetch_tickers()
-        ticker_info = next((t for t in tickers if t['symbol'] == symbol), {})
+        # Get current ticker data
+        ticker_data = await binance.get_ticker(symbol)
         
-        # Format the response
         return {
             "symbol": symbol,
             "base_asset": base_asset,
             "quote_asset": quote_asset,
-            "price_change_24h": ticker_info.get('priceChangePercent', "0"),
-            "last_price": ticker_info.get('lastPrice', "0"),
-            "high_24h": ticker_info.get('highPrice', "0"),
-            "low_24h": ticker_info.get('lowPrice', "0"),
-            "volume_24h": ticker_info.get('volume', "0"),
-            "quote_volume_24h": ticker_info.get('quoteVolume', "0"),
+            "symbol_info": {
+                "is_trading": True,
+                "current_price": ticker_data.get("price") if ticker_data else None,
+                "price_change_24h": ticker_data.get("priceChangePercent") if ticker_data else None,
+                "volume_24h": ticker_data.get("volume24h") if ticker_data else None,
+                "high_24h": ticker_data.get("high24h") if ticker_data else None,
+                "low_24h": ticker_data.get("low24h") if ticker_data else None
+            },
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
     except HTTPException:
@@ -238,91 +267,81 @@ async def get_symbol_info(request: Request, symbol: str):
 async def get_coins_with_trading_pairs(
     request: Request,
     min_quote_assets: int = 1,
-    include_volume: bool = False
+    include_volume: bool = False,
+    binance: BinanceClient = Depends(get_binance_client)
 ):
     """
-    Get a structured list of all coins and their available trading pairs.
-    
-    - **min_quote_assets**: Minimum number of quote assets required for a coin to be included
-    - **include_volume**: Include 24h volume data for each trading pair
+    Get a list of unique coins/tokens with their available trading pairs.
+    Groups symbols by base asset and shows available quote assets.
     """
     try:
-        # Fetch all symbols
-        all_symbols = binance.fetch_symbols()
+        cache_key = "symbols"
+        if not SYMBOLS_CACHE.get(cache_key):
+            SYMBOLS_CACHE[cache_key] = binance.fetch_symbols()
+        symbols = SYMBOLS_CACHE[cache_key]
         
-        # Common quote assets to check
+        # Get ticker data if volume is requested
+        tickers = []
+        if include_volume:
+            tickers = binance.fetch_tickers()
+            ticker_map = {t['symbol']: t for t in tickers}
+        
+        # Group symbols by base asset
+        coins = {}
         common_quotes = ["USDT", "BTC", "ETH", "BNB", "BUSD", "USDC", "EUR", "TRY", "TUSD", "FDUSD"]
         
-        # Dictionary to store coins and their trading pairs
-        coins = {}
-        
-        # Process each symbol
-        for symbol in all_symbols:
-            base_asset = None
+        for symbol in symbols:
+            # Find the quote asset
             quote_asset = None
-            
-            # Try to extract base and quote assets
             for quote in common_quotes:
                 if symbol.endswith(quote):
                     quote_asset = quote
                     base_asset = symbol[:-len(quote)]
                     break
             
-            # If not found with common quotes, try a generic approach
-            if not base_asset:
-                # For longer symbols, assume last 3-4 characters are the quote asset
-                if len(symbol) >= 6:
-                    quote_asset = symbol[-4:]
-                    base_asset = symbol[:-4]
-                else:
-                    # For very short symbols, make a best guess
-                    quote_asset = symbol[-3:]
-                    base_asset = symbol[:-3]
+            if not quote_asset:
+                continue  # Skip symbols with unrecognized quote assets
             
-            # Add to the dictionary
             if base_asset not in coins:
                 coins[base_asset] = {
-                    "name": base_asset,
-                    "trading_pairs": {}
+                    "base_asset": base_asset,
+                    "quote_assets": [],
+                    "trading_pairs": [],
+                    "pair_count": 0
                 }
+                
+                if include_volume:
+                    coins[base_asset]["total_volume"] = 0
             
-            coins[base_asset]["trading_pairs"][quote_asset] = {
-                "symbol": symbol,
-                "full_name": f"{base_asset}/{quote_asset}"
-            }
-        
-        # Get volume data if requested
-        if include_volume:
-            tickers = binance.fetch_tickers()
-            ticker_map = {t['symbol']: t for t in tickers}
+            coins[base_asset]["quote_assets"].append(quote_asset)
+            coins[base_asset]["trading_pairs"].append(symbol)
+            coins[base_asset]["pair_count"] += 1
             
-            # Add volume data to each trading pair
-            for coin in coins.values():
-                for quote, pair_info in coin["trading_pairs"].items():
-                    symbol = pair_info["symbol"]
-                    if symbol in ticker_map:
-                        pair_info["volume_24h"] = ticker_map[symbol].get('volume', "0")
-                        pair_info["quote_volume_24h"] = ticker_map[symbol].get('quoteVolume', "0")
-                        pair_info["price_change_24h"] = ticker_map[symbol].get('priceChangePercent', "0")
+            if include_volume and symbol in ticker_map:
+                volume = float(ticker_map[symbol].get('quoteVolume', 0))
+                coins[base_asset]["total_volume"] += volume
         
-        # Filter coins by minimum number of quote assets
+        # Filter by minimum quote assets
         filtered_coins = {
-            name: data for name, data in coins.items() 
-            if len(data["trading_pairs"]) >= min_quote_assets
+            base: data for base, data in coins.items() 
+            if len(set(data["quote_assets"])) >= min_quote_assets
         }
         
-        # Convert to list and sort by name
-        result = list(filtered_coins.values())
-        result.sort(key=lambda x: x["name"])
+        # Convert to list and sort by pair count
+        coins_list = list(filtered_coins.values())
+        coins_list.sort(key=lambda x: x["pair_count"], reverse=True)
         
         return {
-            "coins": result,
-            "total_coins": len(result),
-            "total_trading_pairs": sum(len(coin["trading_pairs"]) for coin in result),
+            "coins": coins_list,
+            "total_unique_coins": len(coins_list),
+            "filter_applied": {
+                "min_quote_assets": min_quote_assets,
+                "include_volume": include_volume
+            },
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
     except Exception as e:
-        raise HTTPException(status_code=503, detail=f"Service unavailable: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Coins data retrieval failed: {str(e)}")
 
 @router.get("/volatility/comparison", tags=["Market Data"])
 @limiter.limit("10/minute")
@@ -331,112 +350,84 @@ async def compare_volatility(
     symbols: Optional[str] = None,
     top: Optional[int] = 20,
     interval: str = "1h",
-    sort: str = "desc"
+    sort: str = "desc",
+    binance: BinanceClient = Depends(get_binance_client),
+    allowed_intervals: list = Depends(get_allowed_intervals)
 ):
     """
-    Compare volatility across multiple cryptocurrencies.
-    
-    - **symbols**: Comma-separated list of symbols to compare (e.g., "BTCUSDT,ETHUSDT,LINKUSDT")
-    - **top**: If symbols not provided, get this many top market cap coins with USDT pairs
-    - **interval**: Time interval for data (e.g., "1h", "4h", "1d")
-    - **sort**: Sort order for results - "asc" or "desc"
+    Compare volatility across multiple cryptocurrency symbols.
+    Can analyze specific symbols or top N symbols by volume.
     """
     try:
-        if interval not in ALLOWED_INTERVALS:
+        if interval not in allowed_intervals:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid interval. Allowed values: {', '.join(ALLOWED_INTERVALS)}"
+                detail=f"Invalid interval. Allowed values: {', '.join(allowed_intervals)}"
             )
         
-        # Get list of symbols to analyze
-        symbols_to_analyze = []
-        
+        # Determine which symbols to analyze
         if symbols:
-            # User provided symbols list
-            symbols_to_analyze = [s.strip().upper() for s in symbols.split(",")]
-            
-            # Validate symbols
+            symbol_list = [s.strip().upper() for s in symbols.split(',')]
+        else:
+            # Get top symbols by volume
             cache_key = "symbols"
             if not SYMBOLS_CACHE.get(cache_key):
                 SYMBOLS_CACHE[cache_key] = binance.fetch_symbols()
-            valid_symbols = SYMBOLS_CACHE[cache_key]
+            all_symbols = SYMBOLS_CACHE[cache_key]
             
-            invalid_symbols = [s for s in symbols_to_analyze if s not in valid_symbols]
-            if invalid_symbols:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Invalid symbols: {', '.join(invalid_symbols)}"
-                )
-        else:
-            # Get top market cap USDT pairs
+            # Get tickers and sort by volume
             tickers = binance.fetch_tickers()
-            usdt_pairs = [t for t in tickers if t['symbol'].endswith('USDT')]
-            
-            # Sort by volume (approximate for market cap)
-            usdt_pairs.sort(key=lambda x: float(x.get('quoteVolume', 0)), reverse=True)
-            
-            # Take top N symbols
-            symbols_to_analyze = [p['symbol'] for p in usdt_pairs[:top]]
+            ticker_map = {t['symbol']: t for t in tickers}
+            sorted_symbols = sorted(
+                all_symbols,
+                key=lambda s: float(ticker_map.get(s, {}).get('quoteVolume', 0)),
+                reverse=True
+            )
+            symbol_list = sorted_symbols[:top]
         
-        # Import needed classes
-        from app.core.indicators.advanced import AverageTrueRange
-        
-        # Create ATR calculator
-        atr_calculator = AverageTrueRange(window=14)
-        
-        # Collect volatility data for each symbol
+        # Calculate volatility for each symbol
         volatility_data = []
         
-        for symbol in symbols_to_analyze:
+        for symbol in symbol_list[:50]:  # Limit to 50 symbols max
             try:
-                # Get OHLCV data
-                ohlcv = await binance.fetch_ohlcv(symbol, interval, limit=30)
-                
-                if not ohlcv or len(ohlcv) < 14:
+                ohlcv = await binance.fetch_ohlcv(symbol, interval, limit=24)  # 24 periods
+                if len(ohlcv) < 10:  # Need at least 10 data points
                     continue
-                    
-                # Extract price data
-                highs = [candle["high"] for candle in ohlcv]
-                lows = [candle["low"] for candle in ohlcv]
-                closes = [candle["close"] for candle in ohlcv]
                 
-                # Calculate ATR
-                atr_data = atr_calculator.get_signal(highs, lows, closes)
+                closes = [float(candle["close"]) for candle in ohlcv]
                 
-                # Calculate 24h price change
-                price_change_24h = (closes[-1] - closes[-24]) / closes[-24] if len(closes) >= 24 else None
+                # Calculate volatility (standard deviation of returns)
+                returns = [(closes[i] - closes[i-1]) / closes[i-1] for i in range(1, len(closes))]
+                volatility = (sum(r**2 for r in returns) / len(returns))**0.5 * 100  # As percentage
                 
-                # Create result object
-                symbol_data = {
+                # Get current price info
+                current_price = closes[-1]
+                price_change = ((closes[-1] - closes[0]) / closes[0]) * 100
+                
+                volatility_data.append({
                     "symbol": symbol,
-                    "current_price": closes[-1],
-                    "atr_value": atr_data["atr_value"],
-                    "atr_percent": atr_data["atr_percent"],
-                    "volatility_level": atr_data["volatility"],
-                    "price_change_24h": price_change_24h,
-                    "market_phase": atr_data.get("market_phase", {}).get("phase", "UNDEFINED"),
-                    "historical_percentile": atr_data.get("historical_comparison", {}).get("percentile", 50)
-                }
-                
-                volatility_data.append(symbol_data)
+                    "volatility_percent": round(volatility, 4),
+                    "current_price": current_price,
+                    "price_change_percent": round(price_change, 2),
+                    "data_points": len(closes)
+                })
                 
             except Exception as e:
-                logger.warning(f"Error processing {symbol}: {str(e)}")
+                # Skip symbols that fail
                 continue
         
-        # Sort results
-        sort_reverse = sort.lower() != "asc"
-        volatility_data.sort(key=lambda x: x["atr_percent"], reverse=sort_reverse)
+        # Sort by volatility
+        reverse_sort = sort.lower() == "desc"
+        volatility_data.sort(key=lambda x: x["volatility_percent"], reverse=reverse_sort)
         
         return {
-            "interval": interval,
-            "symbols_analyzed": len(volatility_data),
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "sorted_by": f"volatility_{sort}",
-            "volatility_data": volatility_data
+            "volatility_comparison": volatility_data,
+            "analysis_params": {
+                "interval": interval,
+                "symbols_analyzed": len(volatility_data),
+                "sort_order": sort,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
         }
-        
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Volatility comparison failed: {str(e)}")

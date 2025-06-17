@@ -1,4 +1,4 @@
-FROM python:3.9-slim
+FROM python:3.11-slim
 
 WORKDIR /code
 
@@ -18,4 +18,4 @@ ENV PORT=8000
 EXPOSE ${PORT}
 
 # Command to run the application using the environment variable
-CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT} 
+CMD uvicorn main:app --host 0.0.0.0 --port ${PORT} 

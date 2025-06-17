@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-![Banner Image](static/images/20250109_094420_0000.png )
-=======
 # 🚀 Pebble Crypto Analytics API
->>>>>>> 10e0e2c (update commit)
 
 ![Banner Image](static/images/20250109_094420_0000.png)
 
@@ -17,17 +13,187 @@
 
 ## 📋 Table of Contents
 
-- [Features](#-features)
 - [Quick Start](#-quick-start)
-- [API Documentation](#-api-documentation)
+- [🔥 Interactive API Documentation](#-interactive-api-documentation)
+- [📚 Complete API Reference](#-complete-api-reference)
+- [Features](#-features)
 - [Installation](#-installation)
 - [Usage Examples](#-usage-examples)
 - [Project Structure](#-project-structure)
-- [Development](#-development)
 - [Testing](#-testing)
 - [Deployment](#-deployment)
 - [Contributing](#-contributing)
-- [License](#-license)
+
+## 🚀 Quick Start
+
+### 1. Install and Run
+```bash
+# Clone the repository
+git clone https://github.com/your-org/pebble-crypto-backend.git
+cd pebble-crypto-backend
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Start the API server
+uvicorn main:app --reload --port 8000
+```
+
+### 2. Access the API Documentation
+Once the server is running, visit these URLs:
+
+🔥 **Primary Documentation (Recommended)**
+- **Interactive Swagger UI**: http://localhost:8000/docs
+- **Alternative ReDoc**: http://localhost:8000/redoc
+- **OpenAPI Schema**: http://localhost:8000/openapi.json
+
+🏥 **Quick Health Check**
+- **API Status**: http://localhost:8000/api/health
+
+## 🔥 Interactive API Documentation
+
+### 📖 **Using the `/docs` Interface**
+
+The FastAPI automatically generates **interactive API documentation** at `/docs`. This is your main tool for exploring and testing the API:
+
+#### **Key Features of `/docs`:**
+- ✅ **Try It Out**: Test any endpoint directly in the browser
+- ✅ **Real Responses**: See actual API responses with live data
+- ✅ **Request Examples**: Auto-generated request/response schemas
+- ✅ **Authentication**: Test with API keys if required
+- ✅ **Download Schemas**: Export OpenAPI specs for integration
+
+#### **How to Use `/docs`:**
+1. **Navigate** to http://localhost:8000/docs
+2. **Browse** available endpoints by category
+3. **Click** "Try it out" on any endpoint
+4. **Fill** in required parameters
+5. **Execute** to see real responses
+6. **Copy** curl commands for your applications
+
+## 📚 Complete API Reference
+
+### 🏥 **System Health & Status**
+Monitor API health and system performance.
+
+| Endpoint | Method | Description | Try It |
+|----------|--------|-------------|---------|
+| `/api/health` | GET | API status, version, and metrics | [📊 Test](http://localhost:8000/docs#/Health/health_check_api_health_get) |
+
+**Example Response:**
+```json
+{
+  "status": "healthy",
+  "version": "1.0.0",
+  "timestamp": "2025-01-09T12:00:00Z",
+  "uptime": "2 hours 15 minutes"
+}
+```
+
+### 📊 **Market Data Endpoints**
+Get comprehensive cryptocurrency market information.
+
+| Endpoint | Method | Description | Try It |
+|----------|--------|-------------|---------|
+| `/api/market/symbols` | GET | List all available trading symbols | [📈 Test](http://localhost:8000/docs#/Market%20Data/get_symbols_api_market_symbols_get) |
+| `/api/market/data/{symbol}` | GET | Complete market data for a symbol | [📊 Test](http://localhost:8000/docs#/Market%20Data/get_market_data_api_market_data__symbol__get) |
+
+**Example - Get Bitcoin Data:**
+```bash
+curl "http://localhost:8000/api/market/data/BTCUSDT"
+```
+
+**Response Structure:**
+```json
+{
+  "symbol": "BTCUSDT",
+  "price": 45000.00,
+  "change_24h": 2.5,
+  "volume": 1000000,
+  "indicators": {
+    "rsi": 65.2,
+    "macd": "bullish"
+  }
+}
+```
+
+### 🤖 **AI Assistant Endpoints**
+Natural language market analysis and trading advice.
+
+| Endpoint | Method | Description | Try It |
+|----------|--------|-------------|---------|
+| `/api/ai/ask` | POST | Ask questions about markets in natural language | [🤖 Test](http://localhost:8000/docs#/AI%20Assistant/ask_question_api_ai_ask_post) |
+
+**Example - AI Market Query:**
+```bash
+curl -X POST "http://localhost:8000/api/ai/ask" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "Should I buy Bitcoin now? What does the technical analysis say?",
+    "context": {
+      "timeframe": "1d",
+      "risk_tolerance": "moderate"
+    }
+  }'
+```
+
+**Response Structure:**
+```json
+{
+  "response": "Based on current technical analysis...",
+  "confidence": 0.85,
+  "recommendations": ["Consider DCA strategy", "Monitor support at $44,000"],
+  "risk_assessment": "moderate"
+}
+```
+
+### 📈 **Technical Analysis Endpoints**
+Advanced technical analysis and price predictions.
+
+| Endpoint | Method | Description | Try It |
+|----------|--------|-------------|---------|
+| `/api/analysis/predict/{symbol}` | GET | Price predictions and trading signals | [📊 Test](http://localhost:8000/docs#/Technical%20Analysis/predict_api_analysis_predict__symbol__get) |
+| `/api/analysis/compare/{primary_symbol}` | GET | Compare multiple assets | [📊 Test](http://localhost:8000/docs#/Technical%20Analysis/compare_symbols_api_analysis_compare__primary_symbol__get) |
+
+**Example - Bitcoin Prediction:**
+```bash
+curl "http://localhost:8000/api/analysis/predict/BTCUSDT?timeframe=1d"
+```
+
+### 🔄 **Multi-Exchange Endpoints**
+Aggregate data from multiple cryptocurrency exchanges.
+
+| Endpoint | Method | Description | Try It |
+|----------|--------|-------------|---------|
+| `/api/exchanges/health` | GET | Check status of all exchanges | [🏥 Test](http://localhost:8000/docs#/Multi-Exchange/exchange_health_api_exchanges_health_get) |
+| `/api/exchanges/summary` | POST | Get aggregated market data | [📊 Test](http://localhost:8000/docs#/Multi-Exchange/exchange_summary_api_exchanges_summary_post) |
+| `/api/exchanges/arbitrage` | POST | Find arbitrage opportunities | [💰 Test](http://localhost:8000/docs#/Multi-Exchange/arbitrage_opportunities_api_exchanges_arbitrage_post) |
+| `/api/exchanges/coverage` | GET | Exchange information and coverage | [ℹ️ Test](http://localhost:8000/docs#/Multi-Exchange/exchange_coverage_api_exchanges_coverage_get) |
+
+**Example - Arbitrage Detection:**
+```bash
+curl -X POST "http://localhost:8000/api/exchanges/arbitrage" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "symbols": ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+  }'
+```
+
+### ⚡ **Real-Time WebSocket Endpoints**
+Live streaming market data updates.
+
+| Endpoint | Protocol | Description | Try It |
+|----------|----------|-------------|---------|
+| `/api/ws/live/{symbol}` | WebSocket | Real-time price updates | [🔴 Test](http://localhost:8000/docs#/WebSocket/websocket_endpoint_api_ws_live__symbol__get) |
+
+**Example - WebSocket Connection:**
+```javascript
+const ws = new WebSocket('ws://localhost:8000/api/ws/live/BTCUSDT?interval=1h');
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  console.log('Live Bitcoin update:', data);
+};
+```
 
 ## ✨ Features
 
@@ -55,93 +221,6 @@
 - Rate limiting and request throttling
 - WebSocket streaming for real-time updates
 - Comprehensive error handling and monitoring
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Python 3.8+
-- pip package manager
-
-### 1. Clone and Install
-```bash
-git clone https://github.com/your-org/pebble-crypto-backend.git
-cd pebble-crypto-backend
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-### 2. Environment Setup
-```bash
-# Copy environment template
-cp .env.example .env
-
-# Edit configuration (optional - works with defaults)
-nano .env
-```
-
-### 3. Run the API
-```bash
-# Start the development server
-uvicorn main:app --reload --port 8000
-
-# Verify it's running
-curl http://localhost:8000/api/health
-```
-
-### 4. Explore the API
-- **Interactive Docs**: http://localhost:8000/docs
-- **Alternative Docs**: http://localhost:8000/redoc
-- **Health Check**: http://localhost:8000/api/health
-
-## 📚 API Documentation
-
-### 🏥 **System Health**
-```http
-GET /api/health
-```
-Get API status, version, and system health metrics.
-
-### 📊 **Market Data**
-```http
-GET /api/market/symbols                    # Get all trading symbols
-GET /api/market/data/{symbol}              # Comprehensive market data
-```
-
-### 🤖 **AI Assistant** 
-```http
-POST /api/ai/ask
-Content-Type: application/json
-
-{
-  "query": "Should I buy Bitcoin now? What does the technical analysis say?",
-  "context": {"timeframe": "1d", "risk_tolerance": "moderate"}
-}
-```
-
-### 📈 **Technical Analysis**
-```http
-GET /api/analysis/predict/{symbol}         # Price predictions & signals
-GET /api/analysis/compare/{primary_symbol} # Multi-asset comparison
-```
-
-### 🔄 **Multi-Exchange**
-```http
-GET /api/exchanges/health                  # Exchange status monitoring
-POST /api/exchanges/summary                # Market data aggregation
-POST /api/exchanges/arbitrage              # Arbitrage opportunities
-GET /api/exchanges/coverage                # Exchange information
-```
-
-### ⚡ **Real-Time Data**
-```javascript
-// WebSocket connection
-const ws = new WebSocket('ws://localhost:8000/api/ws/live/BTCUSDT?interval=1h');
-ws.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  console.log('Live update:', data);
-};
-```
 
 ## 🛠️ Installation
 
@@ -198,6 +277,16 @@ ANTHROPIC_API_KEY=your_anthropic_key_here
 
 ## 💡 Usage Examples
 
+### Using the Interactive Documentation
+The easiest way to explore the API is through the interactive documentation:
+
+1. **Start the server**: `uvicorn main:app --reload --port 8000`
+2. **Open your browser**: Go to http://localhost:8000/docs
+3. **Pick an endpoint**: Click on any endpoint to expand it
+4. **Try it out**: Click "Try it out" button
+5. **Fill parameters**: Enter required parameters
+6. **Execute**: Click "Execute" to see real responses
+
 ### AI-Powered Market Queries
 ```python
 import requests
@@ -244,18 +333,6 @@ async def live_market_feed():
 asyncio.run(live_market_feed())
 ```
 
-### Multi-Exchange Arbitrage Detection
-```python
-# Find arbitrage opportunities
-response = requests.post('http://localhost:8000/api/exchanges/arbitrage', json={
-    "symbols": ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
-})
-
-opportunities = response.json()
-for opportunity in opportunities.get('arbitrage_opportunities', []):
-    print(f"{opportunity['symbol']}: {opportunity['profit_potential']:.2f}% profit potential")
-```
-
 ## 📁 Project Structure
 
 ```
@@ -289,43 +366,6 @@ pebble-crypto-backend/
     ├── README.md
     └── static/images/
 ```
-
-## 🔧 Development
-
-### Development Setup
-```bash
-# Install development dependencies
-pip install -r requirements-dev.txt
-
-# Run with auto-reload
-uvicorn main:app --reload --port 8000
-
-# Run in development mode with detailed logging
-export ENVIRONMENT=development
-uvicorn main:app --reload --log-level debug
-```
-
-### Code Quality
-```bash
-# Format code
-black .
-
-# Lint code
-flake8 .
-
-# Type checking
-mypy app/
-
-# Security check
-bandit -r app/
-```
-
-### Adding New Features
-1. Create feature branch: `git checkout -b feature/new-feature`
-2. Implement changes in the appropriate `app/` subdirectory
-3. Add comprehensive tests in `tests/`
-4. Update API documentation
-5. Submit pull request
 
 ## 🧪 Testing
 
@@ -428,9 +468,10 @@ This software is for informational purposes only. Cryptocurrency trading carries
 
 ## 🆘 Support
 
-- **Documentation**: Visit http://localhost:8000/docs for interactive API documentation
-- **Issues**: Report bugs and request features on our [GitHub Issues](https://github.com/your-org/pebble-crypto-backend/issues)
-- **Discussions**: Join our [GitHub Discussions](https://github.com/your-org/pebble-crypto-backend/discussions) for community support
+- **📖 Interactive Docs**: Visit http://localhost:8000/docs for complete API documentation
+- **🐛 Issues**: Report bugs and request features on our [GitHub Issues](https://github.com/your-org/pebble-crypto-backend/issues)
+- **💬 Discussions**: Join our [GitHub Discussions](https://github.com/your-org/pebble-crypto-backend/discussions) for community support
+- **📊 API Schema**: Download OpenAPI spec at http://localhost:8000/openapi.json
 
 ## 🎯 Roadmap
 
@@ -442,14 +483,13 @@ This software is for informational purposes only. Cryptocurrency trading carries
 
 ---
 
-<<<<<<< HEAD
-**For the most up-to-date information, always check:**
-1. 📚 `/docs` folder for detailed documentation
-2. 🧪 `/tests` folder for current functionality verification  
-3. 🔄 Recent commits for breaking changes
-4. 📊 API documentation at `http://localhost:8000/docs`
-=======
 **Made with ❤️ by the Pebble Crypto Team**
 
-*For the latest updates and detailed API documentation, visit http://localhost:8000/docs*
->>>>>>> 10e0e2c (update commit)
+## 🔗 Quick Links
+
+- **🔥 Start Here**: http://localhost:8000/docs
+- **📊 API Health**: http://localhost:8000/api/health
+- **📖 Alternative Docs**: http://localhost:8000/redoc
+- **⚡ WebSocket Test**: Use the `/docs` interface to test real-time endpoints
+
+**For the most comprehensive and up-to-date API information, always use the interactive documentation at `/docs`**

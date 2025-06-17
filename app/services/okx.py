@@ -137,7 +137,8 @@ class OKXClient:
     async def fetch_ohlcv(self, symbol: str, interval: str = "1h", limit: int = 100) -> List[Dict]:
         """Fetch OHLCV (candlestick) data for a symbol"""
         async with CACHE_LOCK:
-            cache_key = f"okx_{symbol}_{interval}_{limit}"
+            okx_symbol = self._convert_symbol_format(symbol)
+            cache_key = f"okx_{okx_symbol}_{interval}_{limit}"
             if cache_key in OHLCV_CACHE:
                 return OHLCV_CACHE[cache_key]
             
@@ -147,7 +148,7 @@ class OKXClient:
                 
                 # OKX uses the same endpoint for all instrument types
                 params = {
-                    "instId": symbol,
+                    "instId": okx_symbol,
                     "bar": okx_interval,
                     "limit": limit
                 }
@@ -277,11 +278,11 @@ class OKXClient:
     async def get_ticker(self, symbol: str) -> Optional[Dict]:
         """Get ticker data for a specific symbol"""
         try:
-            # OKX uses the same endpoint for all instrument types
+            okx_symbol = self._convert_symbol_format(symbol)
             response = await asyncio.to_thread(
                 requests.get,
                 f"{OKX_API}/market/ticker",
-                params={"instId": symbol},
+                params={"instId": okx_symbol},
                 headers=HEADERS,
                 timeout=5
             )
@@ -376,4 +377,21 @@ class OKXClient:
             "1w": "1W",
             "1M": "1M"
         }
-        return interval_map.get(interval, "1H") 
+        return interval_map.get(interval, "1H")
+
+    def _convert_symbol_format(self, symbol: str) -> str:
+        """Convert generic symbols like BTCUSDT to OKX format BTC-USDT (dash separated)."""
+        # If the symbol already contains a dash, assume it's correct
+        if "-" in symbol:
+            return symbol.upper()
+
+        symbol = symbol.upper()
+        suffixes = [
+            "USDT", "USDC", "BTC", "ETH", "BNB", "USD", "EUR", "GBP"
+        ]
+        for suff in suffixes:
+            if symbol.endswith(suff):
+                base = symbol[:-len(suff)]
+                return f"{base}-{suff}"
+        # Fallback – return original if no known suffix found
+        return symbol 

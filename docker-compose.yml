@@ -1,4 +1,4 @@
-version: '3'
+version: '3.8'
 
 services:
   api:
@@ -11,4 +11,4 @@ services:
     restart: unless-stopped
     volumes:
       - ./app:/code/app  # For development - enables live code reloading
-    command: uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --reload 
+    command: uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --reload 
